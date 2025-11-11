@@ -13,27 +13,31 @@ O objetivo é aplicar os conceitos de **camadas de aplicação e transporte**, u
 
 ## Estrutura do Projeto
 ```
-batalha_naval/
+Batalha-Naval-P2P/
 │
 ├── app/
 │   ├── __init__.py
-│   ├── main.py
+│   ├── main.py                    # Ponto de entrada da aplicação
+│   │
+│   ├── config/
+│   │   └── ships.json             # Especificações dos navios
 │   │
 │   ├── network/
 │   │   ├── __init__.py
-│   │   ├── Connection.py
-│   │   ├── TCPConnection.py
-│   │   ├── UDPConnection.py
-│   │   ├── messageService.py
-│   │   └── peerService.py
+│   │   ├── connection.py          # Interface de conexão
+│   │   ├── tcpConnection.py       # Implementação TCP
+│   │   ├── udpConnection.py       # Implementação UDP
+│   │   └── peerService.py         # Serviço P2P principal
 │   │
-│   └── game/
+│   ├── game/
+│   │   ├── __init__.py
+│   │   ├── ship.py                # Classe Ship
+│   │   ├── gameController.py      # Lógica do jogo
+│   │   └── gameInterface.py       # Interface do usuário
+│   │
+│   └── utils/
 │       ├── __init__.py
-│       ├── board.py
-│       ├── ship.py
-│       ├── player.py
-│       ├── gameController.py
-│       └── gameInterface.py
+│       └── ship_loader.py         # Carregador de especificações de navios
 │   
 ├── README.md
 └── requirements.txt

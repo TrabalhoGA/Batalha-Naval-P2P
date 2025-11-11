@@ -1,5 +1,4 @@
-import socket
-import threading
+# app/network/connection.py
 
 class Connection:
     def __init__(self, ip: str, port: int):
