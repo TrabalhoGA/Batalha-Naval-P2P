@@ -18,7 +18,7 @@ def main():
     game_controller.carregar_embarcacoes()
     
     # Segundo: Posiciona as embarcações no tabuleiro
-    game_interface.load_posicoes_embarcacoes()
+    game_interface.posicionar_todas_embarcacoes()
     
     # Inicializa o serviço P2P
     peer_service = PeerService(game_controller)

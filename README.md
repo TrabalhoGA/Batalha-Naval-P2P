@@ -17,7 +17,7 @@ Batalha-Naval-P2P/
 │
 ├── app/
 │   ├── __init__.py
-│   ├── main.py                    # Ponto de entrada da aplicação
+│   ├── __main__.py                # Ponto de entrada da aplicação
 │   │
 │   ├── config/
 │   │   └── ships.json             # Especificações dos navios
@@ -39,8 +39,10 @@ Batalha-Naval-P2P/
 │       ├── __init__.py
 │       └── ship_loader.py         # Carregador de especificações de navios
 │   
+├── .gitignore
 ├── README.md
-└── requirements.txt
+├── requirements.txt
+└── run.sh
 ```
 ---
 
@@ -61,3 +63,15 @@ Batalha-Naval-P2P/
 
 ---
 
+## Como executar o projeto
+1. Dê permissão de execução ao script:
+   ```bash
+   chmod +x run.sh
+   ```
+2. Execute o script:
+   ```bash
+   ./run.sh
+   ```
+O script cria (se necessário) o ambiente virtual, instala as dependências e inicia a aplicação Python automaticamente.
+
+---

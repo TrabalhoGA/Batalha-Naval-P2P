@@ -10,7 +10,7 @@ class GameInterface:
     def __init__(self, game_controller: GameController):
         self.game_controller = game_controller
 
-    def load_posicoes_embarcacoes(self) -> List[Ship]:
+    def posicionar_todas_embarcacoes(self) -> List[Ship]:
         if not self.game_controller.embarcacoes:
             raise ValueError("Nenhuma embarcação foi carregada no GameController. Execute game_controller.carregar_embarcacoes() primeiro.")
         
@@ -64,13 +64,13 @@ class GameInterface:
         for y in range(len(novoTabuleiro)):
             for x in range(len(novoTabuleiro[y])):
                 if novoTabuleiro[y][x] == 0:
-                    novoTabuleiro[y][x] = Fore.BLUE + " ~ " + Fore.RESET
+                    novoTabuleiro[y][x] = Fore.BLUE + " 0 " + Fore.RESET
                 elif novoTabuleiro[y][x] == 1:
-                    novoTabuleiro[y][x] = Fore.GREEN + " ■ " + Fore.RESET
+                    novoTabuleiro[y][x] = Fore.GREEN + " 1 " + Fore.RESET
                 elif novoTabuleiro[y][x] == 2:
                     novoTabuleiro[y][x] = Fore.RED + " X " + Fore.RESET
                 elif novoTabuleiro[y][x] == 3:
-                    novoTabuleiro[y][x] = Fore.CYAN + " o " + Fore.RESET
+                    novoTabuleiro[y][x] = Fore.CYAN + " - " + Fore.RESET
 
         for i in range(len(novoTabuleiro)):
             row = novoTabuleiro[i]
@@ -92,13 +92,13 @@ class GameInterface:
         for y in range(len(novoTabuleiro)):
             for x in range(len(novoTabuleiro[y])):
                 if novoTabuleiro[y][x] == 0:
-                    novoTabuleiro[y][x] = Fore.CYAN + " ? " + Fore.RESET
+                    novoTabuleiro[y][x] = Fore.CYAN + " 0 " + Fore.RESET
                 elif novoTabuleiro[y][x] == 1:
-                    novoTabuleiro[y][x] = Fore.CYAN + " ? " + Fore.RESET
+                    novoTabuleiro[y][x] = Fore.CYAN + " 0 " + Fore.RESET
                 elif novoTabuleiro[y][x] == 2:
                     novoTabuleiro[y][x] = Fore.RED + " X " + Fore.RESET
                 elif novoTabuleiro[y][x] == 3:
-                    novoTabuleiro[y][x] = Fore.BLUE + " o " + Fore.RESET
+                    novoTabuleiro[y][x] = Fore.BLUE + " - " + Fore.RESET
 
         for i in range(len(novoTabuleiro)):
             row = novoTabuleiro[i]

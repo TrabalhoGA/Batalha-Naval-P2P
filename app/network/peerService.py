@@ -178,47 +178,6 @@ class PeerService:
         if sender_ip in self.peers:
             self.peers.remove(sender_ip)
 
-    def _start_shooting_timer(self):
-        """Inicia timer para enviar tiros a cada 10 segundos."""
-        def shooting_loop():
-            while self.running:
-                time.sleep(10)
-                if self.running and self.peers:
-                    self._shoot_at_all_peers()
-        
-        self.timer_thread = threading.Thread(target=shooting_loop, daemon=True)
-        self.timer_thread.start()
-        print("[INFO] Timer de tiros iniciado (10 segundos)")
-
-    def _shoot_at_all_peers(self):
-        """Envia um tiro para cada participante."""
-        import random
-        
-        for peer_ip in list(self.peers):  # Cria cópia da lista
-            try:
-                # Inicializa lista de tiros para este jogador se necessário
-                if peer_ip not in self.tiros_por_jogador:
-                    self.tiros_por_jogador[peer_ip] = []
-                
-                # Gera posição aleatória que ainda não foi tentada
-                posicoes_disponiveis = [(x, y) for x in range(10) for y in range(10) 
-                                       if (x, y) not in self.tiros_por_jogador[peer_ip]]
-                
-                if not posicoes_disponiveis:
-                    print(f"[INFO] Todas as posições de {peer_ip} já foram tentadas")
-                    continue
-                
-                x, y = random.choice(posicoes_disponiveis)
-                self.tiros_por_jogador[peer_ip].append((x, y))
-                
-                # Envia tiro via UDP
-                shot_msg = f"shot:{x},{y}"
-                self.udp_connection.send(shot_msg, peer_ip, self.udp_port)
-                print(f"[TIRO] Atirando em {peer_ip} na posição ({x},{y})")
-                
-            except Exception as e:
-                print(f"[ERRO] Falha ao atirar em {peer_ip}: {e}")
-
     def _broadcast_lost(self):
         """Envia mensagem de derrota para todos."""
         print("[INFO] Enviando mensagem 'lost' para todos os participantes...")

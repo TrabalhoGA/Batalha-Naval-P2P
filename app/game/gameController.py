@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional
 from app.game.ship import Ship
 from app.utils.ship_loader import carregar_especificacoes_navios
 

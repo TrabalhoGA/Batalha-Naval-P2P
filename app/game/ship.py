@@ -1,6 +1,5 @@
 from ast import List
 from operator import index
-import random
 
 class Ship:
     def __init__(self, nome, tamanho, posicoes=None):

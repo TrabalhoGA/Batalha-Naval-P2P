@@ -9,4 +9,4 @@ __version__ = "1.0.0"
 __author__ = "Lucas Jaguezeski, Gabriel Gomes"
 __license__ = "MIT"
 
-from .main import main
+from .__main__ import main
