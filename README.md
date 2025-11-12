@@ -57,9 +57,8 @@ Batalha-Naval-P2P/
   - `lost`
   - `saindo`
 - Atualização dinâmica da lista de jogadores conectados
-- Controle da **grid 10x10**, com posicionamento manual ou aleatório dos navios
+- Controle da **grid**, com posicionamento manual ou aleatório dos navios
 - Exibição formatada do tabuleiro e do placar no terminal
-- Loop automático enviando tiros a cada 10 segundos
 
 ---
 

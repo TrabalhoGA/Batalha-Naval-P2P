@@ -29,8 +29,7 @@ def main():
     print("  - 'participantes' ou 'p': Listar participantes")
     print("  - 'sair' ou 'q': Sair do jogo")
     print("  - 'score' ou 's': Ver score atual")
-    print("Tiros automáticos serão disparados a cada 10 segundos")
-    
+        
     # Loop principal do jogo
     try:
         while peer_service.running:

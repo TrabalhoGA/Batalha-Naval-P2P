@@ -1,12 +1,12 @@
 from ast import List
-from operator import index
 
 class Ship:
-    def __init__(self, nome, tamanho, posicoes=None):
+    def __init__(self, nome, tamanho, posicoes=None, tamanho_grid=None):
         self.nome = nome
         self.tamanho = tamanho
         self.posicoes = posicoes or []
         self.hits = set()
+        self.tamanho_grid = tamanho_grid
 
     def __eq__(self, other):
         if not isinstance(other, Ship):
@@ -30,10 +30,10 @@ class Ship:
         pos = self.posicoes[0]
         tamanho = self.tamanho
         if self.posicoes[1] == "v":
-            if pos[0] + tamanho > 10 or pos[0] < 0:
+            if pos[0] + tamanho > self.tamanho_grid or pos[0] < 0:
                 return True
         else:
-            if pos[1] + tamanho > 10 or pos[1] < 0:
+            if pos[1] + tamanho > self.tamanho_grid or pos[1] < 0:
                 return True
             
         return False

@@ -4,10 +4,11 @@ from app.utils.ship_loader import carregar_especificacoes_navios
 
 class GameController:
     def __init__(self):
-        self.tabuleiro = [[0 for y in range(10)] for x in range(10)]
+        self.tamanho_grid = None
+        self.tabuleiro = []
         self.embarcacoes: List[Ship] = []
         self.hitPoints = None
-        self.tabuleiroInimigo = [[0 for y in range(10)] for x in range(10)]
+        self.tabuleiroInimigo = []
         self.hitPointsInimigo = None
 
     def _posicionar_embarcacao(self, embarcacao: Ship):
@@ -23,8 +24,11 @@ class GameController:
         return (linha, coluna)
     
     def carregar_embarcacoes(self):
-        embarcacoesInfo = carregar_especificacoes_navios()
-        self.embarcacoes = [Ship(spec["name"], spec["size"]) for spec in embarcacoesInfo]
+        embarcacoesInfo, tamanho_grid = carregar_especificacoes_navios()
+        self.embarcacoes = [Ship(spec["name"], spec["size"], tamanho_grid=tamanho_grid) for spec in embarcacoesInfo]
+        self.tamanho_grid = tamanho_grid
+        self.tabuleiro = [[0 for y in range(tamanho_grid)] for x in range(tamanho_grid)]
+        self.tabuleiroInimigo = [[0 for y in range(tamanho_grid)] for x in range(tamanho_grid)]
         
         # Calcular hitPoints total baseado no tamanho de todas as embarcações
         self.hitPoints = sum(barco.tamanho for barco in self.embarcacoes)
@@ -89,17 +93,17 @@ class GameController:
         return self.hitPointsInimigo <= 0
 
     def reset(self):
-        self.tabuleiro = [[0 for y in range(10)] for x in range(10)]
-        self.hitPoints = 5 + 4 + 3 + 3 + 2
-        self.tabuleiroInimigo = [[0 for y in range(10)] for x in range(10)]
-        self.hitPointsInimigo = 5 + 4 + 3 + 3 + 2
+        self.tabuleiro = [[0 for y in range(self.tamanho_grid)] for x in range(self.tamanho_grid)]
+        self.hitPoints = sum(barco.tamanho for barco in self.embarcacoes)
+        self.tabuleiroInimigo = [[0 for y in range(self.tamanho_grid)] for x in range(self.tamanho_grid)]
+        self.hitPointsInimigo = sum(barco.tamanho for barco in self.embarcacoes)
         for embarcacao in self.embarcacoes:
             embarcacao.hits.clear()
 
     def registrar_embarcacoes(self, embarcacoes: Optional[List[Ship]]):
         self.embarcacoes = embarcacoes or []
-        self.tabuleiro = [[0 for y in range(10)] for x in range(10)]
-        self.hitPoints = sum(barco.tamanho for barco in self.embarcacoes) or (5 + 4 + 3 + 3 + 2)
+        self.tabuleiro = [[0 for y in range(self.tamanho_grid)] for x in range(self.tamanho_grid)]
+        self.hitPoints = sum(barco.tamanho for barco in self.embarcacoes)
         for barco in self.embarcacoes:
             self._posicionar_embarcacao(barco)
 
@@ -114,7 +118,7 @@ class GameController:
 
     def processar_tiro_recebido(self, linha: int, coluna: int) -> dict:
         resultado = {"hit": False, "destroyed": False, "fleet_destroyed": False}
-        if not (0 <= linha < 10 and 0 <= coluna < 10):
+        if not (0 <= linha < self.tamanho_grid and 0 <= coluna < self.tamanho_grid):
             return resultado
 
         celula = self.tabuleiro[linha][coluna]

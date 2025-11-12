@@ -1,6 +1,9 @@
-[
-  {"name": "Porta-aviões", "size": 5},
-  {"name": "Bombardeiro", "size": 4},
-  {"name": "Submarino", "size": 3},
-  {"name": "Lancha Militar", "size": 2}
-]
+{"ships":
+  [
+    {"name": "Porta-aviões", "size": 5},
+    {"name": "Bombardeiro", "size": 4},
+    {"name": "Submarino", "size": 3},
+    {"name": "Lancha Militar", "size": 2}
+  ],
+  "grid_size": 10
+}

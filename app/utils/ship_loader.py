@@ -1,8 +1,8 @@
 import json
 import os
-from typing import List
+from typing import Tuple, List
 
-def carregar_especificacoes_navios(caminho_arquivo: str = None) -> List[dict]:
+def carregar_especificacoes_navios(caminho_arquivo: str = None) -> Tuple[List[dict], int]:
     if caminho_arquivo is None:
         dir_atual = os.path.dirname(os.path.abspath(__file__))
         caminho_arquivo = os.path.join(dir_atual, "..", "config", "ships.json")
@@ -12,14 +12,20 @@ def carregar_especificacoes_navios(caminho_arquivo: str = None) -> List[dict]:
     
     try:
         with open(caminho_arquivo, 'r', encoding='utf-8') as f:
-            navios = json.load(f)
+            file = json.load(f)
     except json.JSONDecodeError as e:
         raise ValueError(f"Erro ao decodificar JSON: {e}")
+    
+    navios = file.get("ships")
+    tamanho_grid = file.get("grid_size", 10)
     
     if not isinstance(navios, list):
         raise ValueError("O arquivo JSON deve conter uma lista de navios.")
     
-    if len(navios) == 0:
+    if not isinstance(tamanho_grid, int) or tamanho_grid <= 0:
+        raise ValueError("O tamanho do grid deve ser um inteiro positivo.")
+    
+    if len(navios) == 0 or not navios:
         raise ValueError("A lista de navios está vazia.")
     
     for i, navio in enumerate(navios):
@@ -32,4 +38,4 @@ def carregar_especificacoes_navios(caminho_arquivo: str = None) -> List[dict]:
         if not isinstance(navio["size"], int) or navio["size"] <= 0:
             raise ValueError(f"Navio '{navio.get('name', '?')}' possui tamanho inválido.")
     
-    return navios
+    return navios, tamanho_grid

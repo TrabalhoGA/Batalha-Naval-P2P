@@ -31,7 +31,7 @@ class GameInterface:
                 try:
                     pos_decodificada = self.game_controller._decodificar_posicao(posicao)
                     # Criar nova embarcação com posições
-                    embarcacao_posicionada = Ship(embarcacaoNome, embarcacaoTamanho, [pos_decodificada, direcao])
+                    embarcacao_posicionada = Ship(embarcacaoNome, embarcacaoTamanho, [pos_decodificada, direcao], tamanho_grid=self.game_controller.tamanho_grid)
                     posicaoValida = embarcacao_posicionada.pode_posicionar(list(embarcacoes_posicionadas.values()))
                 
                 except Exception as e:
