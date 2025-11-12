@@ -1,0 +1,48 @@
+Descrição:
+Os grupos devem desenvolver uma solução distribuída peer-to-peer (P2P) para participar
+de um exercício de Batalha Naval.
+A solução deve conter uma grid 10x10.
+A posição dos seus 4 navios será definida manualmente ou aleatoriamente, o jogador irá escolher.
+Você terá 4 embarcações:
+• 1 porta-aviões (5 posições);
+• 1 bombardeiro (4 posições)
+• 1 submarino (3 posições);
+• 1 lancha militar (2 posições).
+Você deve criar uma lista para armazenar os IPs dos outros jogadores. 
+
+Inicialização:
+Ao iniciar, a aplicação deve abrir e ficar escutando um socket UDP na porta 5000 e outro
+TCP na porta 5001, logo depois fazer um broadcast UDP para a porta 5000 indicando que está
+participando do jogo com a seguinte mensagem: “Conectando”.
+Todos que receberem essa mensagem, devem adicionar a origem dela na lista de
+participantes e responder com TCP (porta 5001) enviando a sua lista de IPs de participantes,
+“participantes: [‘191.4.254.129’, ‘191.4.254.130’]”.
+
+Execução:
+Cada jogador deverá manter um timer, para executar a ação a cada 10 segundos:
+Enviar uma mensagem UDP para cada um dos participantes da lista, tentando atingir uma
+posição: “shot:{x},{y}”.
+Similarmente os programas também terão que responder essas mensagens:
+Ao receber um UDP “shot:{x},{y}”, os jogadores devem verificar se essa é a posição da sua
+embarcação, caso tenha sido atingido, responder com um TCP ao remetente com a
+mensagem: “hit”.
+Quando toda a embarcação for atingida e destruída, responder com um TCP ao
+remetente com a mensagem: “destroyed”.
+Quando todas as embarcações do jogador estiverem destruídas, enviar uma mensagem
+UDP para os participantes com a mensagem: “lost”.
+Deve mostrar no mapa aonde foram os disparos de todos os jogadores, incluindo os nossos
+O usuário terá 10s para escolher uma posição para atacar
+Se ele não escolher, o computador escolherá sozinho uma posição que ainda não foi atacada
+
+Interface:
+Durante a execução do programa ele deve imprimir na tela cada vez que a lista de
+participantes for atualizada, a sua posição e as mensagens enviadas ou recebidas.
+
+Finalização:
+O programa deve ter mais uma opção para sair, enviando uma mensagem UDP para os
+participantes com a mensagem: “saindo” (os demais participantes ao receber essa mensagem
+devem parar de enviar mensagens para esse participante).
+Ao sair o programa deve imprimir na tela o seu score, indicando quantas vezes foi atingido
+e quantas vezes atingiu cada jogador ao longo do jogo.
+O score final é calculado pelo número de jogadores atingido menos o número de vezes
+antigido (atingir mais de uma vez cada jogador não aumenta)

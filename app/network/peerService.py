@@ -2,6 +2,7 @@ import socket
 import threading
 import time
 import json
+import random
 from app.network.tcpConnection import TCPConnection
 from app.network.udpConnection import UDPConnection
 
@@ -22,6 +23,11 @@ class PeerService:
         self.jogadores_atingidos = set()  # IPs únicos de jogadores atingidos
         self.vezes_atingido = 0  # Quantas vezes fui atingido
         self.tiros_por_jogador = {}  # Dicionário {ip: [posições já tentadas]}
+        
+        # Controle de turno de ataque
+        self.input_escolhido = None
+        self.input_lock = threading.Lock()
+        self.aguardando_input = False
         
     def start(self):
         """Inicia o serviço P2P."""
@@ -160,11 +166,25 @@ class PeerService:
         """Processa confirmação de acerto."""
         print(f"[ACERTO] Você acertou uma embarcação de {sender_ip}!")
         self.jogadores_atingidos.add(sender_ip)
+        
+        # Atualiza o tabuleiro visual com o acerto se possível
+        if sender_ip in self.tiros_por_jogador and self.tiros_por_jogador[sender_ip]:
+            ultimo_tiro = self.tiros_por_jogador[sender_ip][-1]
+            self.game_controller.registrar_tiro_enviado(ultimo_tiro[0], ultimo_tiro[1], acertou=True)
+            # Também registra no tabuleiro específico do jogador
+            self.game_controller.registrar_tiro_para_jogador(sender_ip, ultimo_tiro[0], ultimo_tiro[1], acertou=True)
 
     def _handle_destroyed(self, sender_ip):
         """Processa confirmação de embarcação destruída."""
         print(f"[DESTRUÍDO] Você destruiu uma embarcação de {sender_ip}!")
         self.jogadores_atingidos.add(sender_ip)
+        
+        # Atualiza o tabuleiro visual com o acerto
+        if sender_ip in self.tiros_por_jogador and self.tiros_por_jogador[sender_ip]:
+            ultimo_tiro = self.tiros_por_jogador[sender_ip][-1]
+            self.game_controller.registrar_tiro_enviado(ultimo_tiro[0], ultimo_tiro[1], acertou=True)
+            # Também registra no tabuleiro específico do jogador
+            self.game_controller.registrar_tiro_para_jogador(sender_ip, ultimo_tiro[0], ultimo_tiro[1], acertou=True)
 
     def _handle_lost(self, sender_ip):
         """Processa mensagem de derrota de um jogador."""
@@ -217,3 +237,188 @@ class PeerService:
         score_final = len(self.jogadores_atingidos) - self.vezes_atingido
         print(f"\nSCORE: {score_final}")
         print("="*50 + "\n")
+
+    def _start_shooting_timer(self):
+        """Inicia o timer que dispara a cada 10 segundos."""
+        def _timer_loop():
+            print("[INFO] Timer de disparos iniciado - Ataque a cada 10 segundos")
+            while self.running:
+                time.sleep(10)  # Aguarda 10 segundos
+                
+                if not self.running:
+                    break
+                    
+                if not self.peers:
+                    print("\n[INFO] Nenhum oponente conectado. Aguardando jogadores...")
+                    continue
+                
+                # Verifica se já perdeu
+                if self.game_controller.perdeu():
+                    print("\n[GAME OVER] Você não pode mais atacar.")
+                    break
+                
+                # Realiza o ataque
+                self._realizar_turno_ataque()
+        
+        self.timer_thread = threading.Thread(target=_timer_loop, daemon=True)
+        self.timer_thread.start()
+
+    def _realizar_turno_ataque(self):
+        """Realiza um turno de ataque, perguntando ao jogador ou escolhendo automaticamente."""
+        print("\n" + "="*50)
+        print("TURNO DE ATAQUE")
+        print("="*50)
+        print(f"Oponentes disponíveis: {len(self.peers)}")
+        
+        # Lista os oponentes
+        for i, peer_ip in enumerate(self.peers, 1):
+            tiros_feitos = len(self.tiros_por_jogador.get(peer_ip, []))
+            print(f"  {i}. {peer_ip} (Tiros feitos: {tiros_feitos})")
+        
+        # Para cada oponente, faz um ataque
+        for peer_ip in list(self.peers):
+            if not self.running or self.game_controller.perdeu():
+                break
+                
+            print(f"\n→ Atacando {peer_ip}...")
+            posicao = self._escolher_alvo_com_timeout(peer_ip, timeout=10)
+            
+            if posicao:
+                self._enviar_tiro(peer_ip, posicao)
+            else:
+                print("[TIMEOUT] Nenhuma posição escolhida.")
+
+    def _escolher_alvo_com_timeout(self, peer_ip, timeout=10):
+        """
+        Permite ao usuário escolher um alvo em até 'timeout' segundos.
+        Se não escolher, seleciona automaticamente.
+        """
+        # Reseta estado
+        with self.input_lock:
+            self.input_escolhido = None
+            self.aguardando_input = True
+        
+        print(f"\n[INPUT] Escolha uma posição para atacar {peer_ip} (ex: a5)")
+        print(f"[INPUT] Você tem {timeout} segundos para decidir...")
+        print("[INPUT] (Pressione Enter sem digitar nada para atacar automaticamente)")
+        
+        # Thread para capturar input do usuário
+        def _capturar_input():
+            try:
+                escolha = input("Posição: ").strip().lower()
+                with self.input_lock:
+                    if self.aguardando_input:
+                        self.input_escolhido = escolha if escolha else None
+            except:
+                pass
+        
+        input_thread = threading.Thread(target=_capturar_input, daemon=True)
+        input_thread.start()
+        
+        # Aguarda timeout
+        input_thread.join(timeout=timeout)
+        
+        # Finaliza período de input
+        with self.input_lock:
+            self.aguardando_input = False
+            escolha_usuario = self.input_escolhido
+        
+        # Se usuário escolheu e é válido
+        if escolha_usuario:
+            try:
+                pos_decodificada = self._decodificar_posicao(escolha_usuario)
+                linha, coluna = pos_decodificada
+                
+                # Verifica se já foi atacada
+                if (linha, coluna) in self.tiros_por_jogador.get(peer_ip, []):
+                    print(f"[AVISO] Posição {escolha_usuario} já foi atacada antes! Escolhendo automaticamente...")
+                    return self._escolher_posicao_automatica(peer_ip)
+                
+                print(f"[OK] Você escolheu atacar: {escolha_usuario}")
+                return (linha, coluna)
+            except Exception as e:
+                print(f"[ERRO] Posição inválida: {e}. Escolhendo automaticamente...")
+                return self._escolher_posicao_automatica(peer_ip)
+        
+        # Escolha automática
+        print("[AUTO] Tempo esgotado! Escolhendo posição automaticamente...")
+        return self._escolher_posicao_automatica(peer_ip)
+
+    def _decodificar_posicao(self, posicao):
+        """Decodifica uma posição no formato 'a5' para (linha, coluna)."""
+        if len(posicao) < 2:
+            raise ValueError("Posição muito curta")
+        
+        letra_posicao = {"a": 0, "b": 1, "c": 2, "d": 3, "e": 4, 
+                        "f": 5, "g": 6, "h": 7, "i": 8, "j": 9}
+        
+        letra = posicao[0].lower()
+        numero = posicao[1:]
+        
+        if letra not in letra_posicao:
+            raise ValueError(f"Letra inválida: {letra}")
+        
+        linha = letra_posicao[letra]
+        coluna = int(numero)
+        
+        if not (0 <= coluna < self.game_controller.tamanho_grid):
+            raise ValueError(f"Coluna inválida: {coluna}")
+        
+        return (linha, coluna)
+
+    def _escolher_posicao_automatica(self, peer_ip):
+        """Escolhe automaticamente uma posição que ainda não foi atacada."""
+        tamanho_grid = self.game_controller.tamanho_grid
+        
+        # Inicializa lista de tiros se não existir
+        if peer_ip not in self.tiros_por_jogador:
+            self.tiros_por_jogador[peer_ip] = []
+        
+        tiros_feitos = self.tiros_por_jogador[peer_ip]
+        
+        # Gera todas as posições possíveis
+        todas_posicoes = [(x, y) for x in range(tamanho_grid) for y in range(tamanho_grid)]
+        
+        # Filtra posições não atacadas
+        posicoes_disponiveis = [pos for pos in todas_posicoes if pos not in tiros_feitos]
+        
+        if not posicoes_disponiveis:
+            print(f"[INFO] Todas as posições de {peer_ip} já foram atacadas!")
+            return None
+        
+        # Escolhe aleatoriamente
+        posicao_escolhida = random.choice(posicoes_disponiveis)
+        
+        # Converte para formato legível
+        letra_posicao = {0: "a", 1: "b", 2: "c", 3: "d", 4: "e", 
+                        5: "f", 6: "g", 7: "h", 8: "i", 9: "j"}
+        posicao_str = f"{letra_posicao[posicao_escolhida[0]]}{posicao_escolhida[1]}"
+        
+        print(f"[AUTO] Posição escolhida automaticamente: {posicao_str}")
+        return posicao_escolhida
+
+    def _enviar_tiro(self, peer_ip, posicao):
+        """Envia um tiro para o peer especificado."""
+        if posicao is None:
+            return
+        
+        linha, coluna = posicao
+        
+        # Registra o tiro
+        if peer_ip not in self.tiros_por_jogador:
+            self.tiros_por_jogador[peer_ip] = []
+        self.tiros_por_jogador[peer_ip].append(posicao)
+        
+        # Marca no tabuleiro visual consolidado (será atualizado se acertar)
+        self.game_controller.registrar_tiro_enviado(linha, coluna, acertou=False)
+        
+        # Marca no tabuleiro específico do jogador
+        self.game_controller.registrar_tiro_para_jogador(peer_ip, linha, coluna, acertou=False)
+        
+        # Envia mensagem UDP
+        mensagem = f"shot:{linha},{coluna}"
+        try:
+            self.udp_connection.send(mensagem, peer_ip, self.udp_port)
+            print(f"[TIRO] Disparado em ({linha},{coluna}) para {peer_ip}")
+        except Exception as e:
+            print(f"[ERRO] Falha ao enviar tiro para {peer_ip}: {e}")

@@ -25,34 +25,51 @@ def main():
     peer_service.start()
 
     print("Jogo iniciado! Comandos disponíveis:")
-    print("  - 'tabuleiro' ou 't': Exibir tabuleiros")
+    print("  - 'tabuleiro' ou 't': Exibir tabuleiro consolidado")
+    print("  - 'todos' ou 'a': Exibir todos os tabuleiros (por jogador)")
     print("  - 'participantes' ou 'p': Listar participantes")
     print("  - 'sair' ou 'q': Sair do jogo")
     print("  - 'score' ou 's': Ver score atual")
+    print("\n[INFO] O jogo atacará automaticamente a cada 10 segundos.")
+    print("[INFO] Quando for seu turno, você terá 10s para escolher o alvo.")
+    print("[INFO] Pressione Enter a qualquer momento para ver o menu.\n")
         
     # Loop principal do jogo
     try:
         while peer_service.running:
-            comando = input("\nComando: ").strip().lower()
+            # Usa um try para não travar se o usuário não digitar nada
+            try:
+                comando = input("\nComando (ou Enter para continuar): ").strip().lower()
+            except EOFError:
+                continue
+            except KeyboardInterrupt:
+                raise
+            
+            if not comando:
+                continue
             
             if comando in ['sair', 'q', 'quit', 'exit']:
                 peer_service.sair()
                 break
             elif comando in ['tabuleiro', 't']:
                 game_interface.exibir_tabuleiro()
+            elif comando in ['todos', 'a', 'all']:
+                game_interface.exibir_tabuleiros_por_jogador(peer_service.peers)
             elif comando in ['participantes', 'p']:
                 print(f"\n[PARTICIPANTES] Total: {len(peer_service.peers)}")
                 for i, peer in enumerate(peer_service.peers, 1):
-                    print(f"  {i}. {peer}")
+                    tiros = len(peer_service.tiros_por_jogador.get(peer, []))
+                    print(f"  {i}. {peer} (Tiros realizados: {tiros})")
             elif comando in ['score', 's']:
                 print(f"\n[SCORE ATUAL]")
                 print(f"  Jogadores atingidos: {len(peer_service.jogadores_atingidos)}")
+                for jogador in peer_service.jogadores_atingidos:
+                    print(f"    - {jogador}")
                 print(f"  Vezes atingido: {peer_service.vezes_atingido}")
                 print(f"  Score: {len(peer_service.jogadores_atingidos) - peer_service.vezes_atingido}")
-            elif comando == '':
-                continue
             else:
-                print("Comando não reconhecido. Use 'sair', 'tabuleiro', 'participantes' ou 'score'")
+                print("Comando não reconhecido.")
+                print("Use: 'sair', 'tabuleiro', 'todos', 'participantes' ou 'score'")
                 
             # Verifica se perdeu
             if game_controller.perdeu():

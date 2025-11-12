@@ -10,6 +10,7 @@ class GameController:
         self.hitPoints = None
         self.tabuleiroInimigo = []
         self.hitPointsInimigo = None
+        self.tabuleiros_por_jogador = {}  # {ip: [[grid]]} - Rastreia tiros por jogador
 
     def _posicionar_embarcacao(self, embarcacao: Ship):
         alcanceEmbarcacao = embarcacao.get_alcance()
@@ -91,6 +92,31 @@ class GameController:
     
     def venceu(self) -> bool:
         return self.hitPointsInimigo <= 0
+    
+    def registrar_tiro_enviado(self, linha: int, coluna: int, acertou: bool = False):
+        """Registra um tiro que fizemos no tabuleiro inimigo visualizado."""
+        if 0 <= linha < self.tamanho_grid and 0 <= coluna < self.tamanho_grid:
+            if acertou:
+                self.tabuleiroInimigo[linha][coluna] = 2  # Acerto (vermelho)
+            else:
+                if self.tabuleiroInimigo[linha][coluna] == 0:  # Só marca se não tinha nada
+                    self.tabuleiroInimigo[linha][coluna] = 3  # Erro (azul claro)
+    
+    def criar_tabuleiro_para_jogador(self, ip_jogador: str):
+        """Cria um tabuleiro específico para rastrear ataques a um jogador."""
+        if ip_jogador not in self.tabuleiros_por_jogador:
+            self.tabuleiros_por_jogador[ip_jogador] = [[0 for y in range(self.tamanho_grid)] for x in range(self.tamanho_grid)]
+    
+    def registrar_tiro_para_jogador(self, ip_jogador: str, linha: int, coluna: int, acertou: bool = False):
+        """Registra um tiro enviado para um jogador específico."""
+        self.criar_tabuleiro_para_jogador(ip_jogador)
+        
+        if 0 <= linha < self.tamanho_grid and 0 <= coluna < self.tamanho_grid:
+            if acertou:
+                self.tabuleiros_por_jogador[ip_jogador][linha][coluna] = 2  # Acerto
+            else:
+                if self.tabuleiros_por_jogador[ip_jogador][linha][coluna] == 0:
+                    self.tabuleiros_por_jogador[ip_jogador][linha][coluna] = 3  # Erro
 
     def reset(self):
         self.tabuleiro = [[0 for y in range(self.tamanho_grid)] for x in range(self.tamanho_grid)]
