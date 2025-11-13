@@ -134,6 +134,11 @@ class PeerService:
     def _handle_shot(self, message, sender_ip):
         """Processa tiro recebido."""
         try:
+            # Adiciona o remetente aos peers se não estiver na lista
+            if sender_ip not in self.peers:
+                print(f"[INFO] Adicionando {sender_ip} aos oponentes (recebeu tiro)")
+                self.peers.append(sender_ip)
+            
             # Extrai coordenadas: "shot:x,y"
             coords = message.replace("shot:", "").split(",")
             x = int(coords[0])
@@ -249,7 +254,9 @@ class PeerService:
                     break
                     
                 if not self.peers:
-                    print("\n[INFO] Nenhum oponente conectado. Aguardando jogadores...")
+                    # Só mostra mensagem se também não recebemos nenhum tiro ainda
+                    if self.vezes_atingido == 0:
+                        print("\n[INFO] Nenhum oponente conectado. Aguardando jogadores...")
                     continue
                 
                 # Verifica se já perdeu
