@@ -38,6 +38,11 @@ def main():
     # Loop principal do jogo
     try:
         while peer_service.running:
+            # Aguarda se estiver em turno de ataque
+            if peer_service.aguardando_input:
+                time.sleep(0.5)
+                continue
+                
             # Usa um try para não travar se o usuário não digitar nada
             try:
                 comando = input("\nComando (ou Enter para continuar): ").strip().lower()
