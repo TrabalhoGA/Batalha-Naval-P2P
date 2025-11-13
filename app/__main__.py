@@ -1,11 +1,21 @@
 import sys
 import time
+import os
+import platform
 from app.game.gameInterface import GameInterface
 from app.game.gameController import GameController
 from app.network.peerService import PeerService
 
 
+def limpar_terminal():
+    """Limpa o terminal conforme o SO (Windows/Unix)."""
+    if platform.system() == "Windows":
+        os.system("cls")
+    else:
+        os.system("clear")
+
 def main():
+    limpar_terminal()
     print("="*50)
     print("BEM-VINDO AO BATALHA NAVAL P2P")
     print("="*50)
@@ -50,6 +60,9 @@ def main():
             
             if not comando:
                 continue
+
+            # Limpa o terminal logo após o jogador digitar algo
+            limpar_terminal()
             
             # Verifica se é input de turno de ataque
             if peer_service.processar_input(comando):

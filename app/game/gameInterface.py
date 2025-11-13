@@ -184,16 +184,26 @@ class GameInterface:
             print(line)
                     
     def exibir_tabuleiro(self):
-        print(f"\n{'='*40}")
-        print(f"SEU TABULEIRO:")
-        print(f"{'='*40}")
+        # título centralizado com cor
+        largura = 40
+        print(Fore.YELLOW + "=" * largura + Fore.RESET)
+        titulo = "SEU TABULEIRO"
+        print(Fore.YELLOW + titulo.center(largura) + Fore.RESET)
+        print(Fore.YELLOW + "=" * largura + Fore.RESET)
         self.carregar_tabuleiro_proprio()
 
-        print(f"\n{'='*40}")
-        print(f"TABULEIRO INIMIGO (Consolidado):")
-        print(f"{'='*40}")
+        print()  # separador
+        print(Fore.YELLOW + "=" * largura + Fore.RESET)
+        titulo2 = "TABULEIRO INIMIGO (Consolidado)"
+        print(Fore.YELLOW + titulo2.center(largura) + Fore.RESET)
+        print(Fore.YELLOW + "=" * largura + Fore.RESET)
         self.carregar_tabuleiro_inimigo()
         print()
+
+        # legenda
+        print("Legenda: " + Fore.GREEN + "1=Navio" + Fore.RESET + " " +
+              Fore.RED + "X=Atingido" + Fore.RESET + " " +
+              Fore.CYAN + "-=Tiro (Água)" + Fore.RESET)
     
     def exibir_tabuleiros_por_jogador(self, peers: list):
         """Exibe tabuleiros individuais para cada jogador."""

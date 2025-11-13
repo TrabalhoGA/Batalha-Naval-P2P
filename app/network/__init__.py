@@ -4,7 +4,7 @@
 Pacote de rede do jogo Batalha Naval P2P.
 """
 
+from .TCPConnection import TCPConnection
+from .UDPConnection import UDPConnection
 from .connection import Connection
-from .tcpConnection import TCPConnection
-from .udpConnection import UDPConnection
 from .peerService import PeerService

@@ -3,8 +3,8 @@ import threading
 import time
 import json
 import random
-from app.network.tcpConnection import TCPConnection
-from app.network.udpConnection import UDPConnection
+from app.network.TCPConnection import TCPConnection
+from app.network.UDPConnection import UDPConnection
 
 class PeerService:
     def __init__(self, game_controller):
