@@ -275,37 +275,38 @@ class PeerService:
             tiros_feitos = len(self.tiros_por_jogador.get(peer_ip, []))
             print(f"  {i}. {peer_ip} (Tiros feitos: {tiros_feitos})")
         
-        # Para cada oponente, faz um ataque
+        # Escolhe UMA posição para atacar TODOS os jogadores
+        print(f"\n[INPUT] Escolha UMA posição para atacar TODOS os oponentes (ex: a5)")
+        print(f"[INPUT] Você tem 10 segundos para decidir...")
+        posicao_escolhida = self._escolher_alvo_com_timeout(timeout=10)
+        
+        if not posicao_escolhida:
+            print("[INFO] Nenhuma posição escolhida.")
+            return
+        
+        # Aplica o ataque para cada oponente
         for peer_ip in list(self.peers):
             if not self.running or self.game_controller.perdeu():
                 break
                 
-            print(f"\n→ Atacando {peer_ip}...")
-            posicao = self._escolher_alvo_com_timeout(peer_ip, timeout=10)
-            
-            if posicao:
-                self._enviar_tiro(peer_ip, posicao)
-            else:
-                print("[TIMEOUT] Nenhuma posição escolhida.")
+            print(f"\n→ Atacando {peer_ip} na posição escolhida...")
+            self._enviar_tiro(peer_ip, posicao_escolhida)
 
-    def _escolher_alvo_com_timeout(self, peer_ip, timeout=10):
+    def _escolher_alvo_com_timeout(self, timeout=10):
         """
         Permite ao usuário escolher um alvo em até 'timeout' segundos.
         Se não escolher, seleciona automaticamente.
+        Retorna uma tupla (linha, coluna) ou None.
         """
         # Reseta estado
         with self.input_lock:
             self.input_escolhido = None
             self.aguardando_input = True
         
-        print(f"\n[INPUT] Escolha uma posição para atacar {peer_ip} (ex: a5)")
-        print(f"[INPUT] Você tem {timeout} segundos para decidir...")
-        print("[INPUT] (Pressione Enter sem digitar nada para atacar automaticamente)")
-        
         # Thread para capturar input do usuário
         def _capturar_input():
             try:
-                escolha = input("Posição: ").strip().lower()
+                escolha = input("Digite a posição (ou deixe vazio para auto): ").strip().lower()
                 with self.input_lock:
                     if self.aguardando_input:
                         self.input_escolhido = escolha if escolha else None
@@ -329,20 +330,15 @@ class PeerService:
                 pos_decodificada = self._decodificar_posicao(escolha_usuario)
                 linha, coluna = pos_decodificada
                 
-                # Verifica se já foi atacada
-                if (linha, coluna) in self.tiros_por_jogador.get(peer_ip, []):
-                    print(f"[AVISO] Posição {escolha_usuario} já foi atacada antes! Escolhendo automaticamente...")
-                    return self._escolher_posicao_automatica(peer_ip)
-                
-                print(f"[OK] Você escolheu atacar: {escolha_usuario}")
+                print(f"[OK] Você escolheu atacar na posição: {escolha_usuario.upper()}")
                 return (linha, coluna)
             except Exception as e:
                 print(f"[ERRO] Posição inválida: {e}. Escolhendo automaticamente...")
-                return self._escolher_posicao_automatica(peer_ip)
+                return self._escolher_posicao_automatica_geral()
         
-        # Escolha automática
+        # Escolha automática se não digitou nada ou timeout
         print("[AUTO] Tempo esgotado! Escolhendo posição automaticamente...")
-        return self._escolher_posicao_automatica(peer_ip)
+        return self._escolher_posicao_automatica_geral()
 
     def _decodificar_posicao(self, posicao):
         """Decodifica uma posição no formato 'a5' para (linha, coluna)."""
@@ -367,7 +363,7 @@ class PeerService:
         return (linha, coluna)
 
     def _escolher_posicao_automatica(self, peer_ip):
-        """Escolhe automaticamente uma posição que ainda não foi atacada."""
+        """Escolhe automaticamente uma posição que ainda não foi atacada para um jogador específico."""
         tamanho_grid = self.game_controller.tamanho_grid
         
         # Inicializa lista de tiros se não existir
@@ -395,6 +391,24 @@ class PeerService:
         posicao_str = f"{letra_posicao[posicao_escolhida[0]]}{posicao_escolhida[1]}"
         
         print(f"[AUTO] Posição escolhida automaticamente: {posicao_str}")
+        return posicao_escolhida
+
+    def _escolher_posicao_automatica_geral(self):
+        """Escolhe automaticamente uma posição aleatória do grid."""
+        tamanho_grid = self.game_controller.tamanho_grid
+        
+        # Gera todas as posições possíveis
+        todas_posicoes = [(x, y) for x in range(tamanho_grid) for y in range(tamanho_grid)]
+        
+        # Escolhe aleatoriamente
+        posicao_escolhida = random.choice(todas_posicoes)
+        
+        # Converte para formato legível
+        letra_posicao = {0: "a", 1: "b", 2: "c", 3: "d", 4: "e", 
+                        5: "f", 6: "g", 7: "h", 8: "i", 9: "j"}
+        posicao_str = f"{letra_posicao[posicao_escolhida[0]]}{posicao_escolhida[1]}"
+        
+        print(f"[AUTO] Posição escolhida automaticamente: {posicao_str.upper()}")
         return posicao_escolhida
 
     def _enviar_tiro(self, peer_ip, posicao):

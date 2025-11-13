@@ -31,8 +31,9 @@ def main():
     print("  - 'sair' ou 'q': Sair do jogo")
     print("  - 'score' ou 's': Ver score atual")
     print("\n[INFO] O jogo atacará automaticamente a cada 10 segundos.")
-    print("[INFO] Quando for seu turno, você terá 10s para escolher o alvo.")
-    print("[INFO] Pressione Enter a qualquer momento para ver o menu.\n")
+    print("[INFO] Quando for seu turno, digite uma posição (ex: a5) em até 10s.")
+    print("[INFO] A mesma posição será usada para atacar TODOS os oponentes.")
+    print("[INFO] Digite comandos abaixo quando NÃO estiver em turno de ataque.\n")
         
     # Loop principal do jogo
     try:
