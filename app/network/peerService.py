@@ -3,8 +3,18 @@ import threading
 import time
 import json
 import random
+import os
+import platform
 from app.network.TCPConnection import TCPConnection
 from app.network.UDPConnection import UDPConnection
+from app.game.gameInterface import GameInterface
+
+def limpar_terminal():
+    """Limpa o terminal conforme o SO (Windows/Unix)."""
+    if platform.system().lower().startswith("win"):
+        os.system("cls")
+    else:
+        os.system("clear")
 
 class PeerService:
     def __init__(self, game_controller):
@@ -253,6 +263,7 @@ class PeerService:
         def _timer_loop():
             print("[INFO] Timer de disparos iniciado - Ataque a cada 10 segundos")
             while self.running:
+                
                 time.sleep(10)  # Aguarda 10 segundos
                 
                 if not self.running:
@@ -289,15 +300,40 @@ class PeerService:
             self.aguardando_input = True
         
         print(f"\nDigite uma posição para atacar (ex: a5)")
-        
-        # Aguarda input por 10 segundos
+
+        # Cria um GameInterface temporário para exibir os tabuleiros
+        try:
+            gi = GameInterface(self.game_controller)
+        except Exception:
+            gi = None
+
+        # Aguarda input por 10 segundos exibindo os tabuleiros enquanto isso
         inicio = time.time()
         while time.time() - inicio < 10:
             with self.input_lock:
                 if self.input_escolhido is not None:
                     break
-            time.sleep(0.1)
-        
+
+            # Limpa o terminal e mostra os tabuleiros (aliado + inimigos) para o jogador
+            try:
+                limpar_terminal()
+                remaining = int(10 - (time.time() - inicio))
+                print(f"[TURNO DE ATAQUE] Você tem {remaining} segundos para escolher uma posição\n")
+                if gi:
+                    # Exibe o tabuleiro próprio e o consolidado dos inimigos
+                    gi.exibir_tabuleiro()
+                    if self.peers:
+                        print("\n--- Tabuleiros dos inimigos (consolidado) ---\n")
+                        gi.exibir_tabuleiros_por_jogador(self.peers)
+                else:
+                    # Fallback simples se GameInterface não puder ser instanciado
+                    print("Tabuleiros não disponíveis no momento.")
+            except Exception:
+                # Não deixar que a exibição quebre o loop de input
+                pass
+
+            time.sleep(1)
+
         # Finaliza período de input
         with self.input_lock:
             self.aguardando_input = False

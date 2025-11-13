@@ -16,9 +16,9 @@ def limpar_terminal():
 
 def main():
     limpar_terminal()
-    print("="*50)
+    print("="*35)
     print("BEM-VINDO AO BATALHA NAVAL P2P")
-    print("="*50)
+    print("="*35)
     
     # Inicializa o controlador do jogo
     game_controller = GameController()

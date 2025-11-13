@@ -16,9 +16,9 @@ class GameInterface:
             raise ValueError("Nenhuma embarcação foi carregada no GameController. Execute game_controller.carregar_embarcacoes() primeiro.")
         
         # Pergunta se quer posicionar manualmente ou automaticamente
-        print("\n" + "="*50)
+        print("\n" + "="*35)
         print("POSICIONAMENTO DE EMBARCAÇÕES")
-        print("="*50)
+        print("="*35)
         escolha = input("Deseja posicionar as embarcações manualmente ou automaticamente? (m/a): ").lower().strip()
         
         if escolha == 'a':
