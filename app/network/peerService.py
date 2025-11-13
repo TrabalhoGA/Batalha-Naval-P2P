@@ -32,10 +32,6 @@ class PeerService:
         
     def start(self):
         """Inicia o serviço P2P."""
-        print(f"[INFO] Iniciando serviço P2P - IP: {self.ip_address}")
-        print(f"[INFO] Escutando UDP na porta {self.udp_port}")
-        print(f"[INFO] Escutando TCP na porta {self.tcp_port}")
-        
         # Inicia listeners
         self.udp_connection.listen(self._handle_udp_message)
         self.tcp_connection.listen(self._handle_tcp_message)
@@ -54,7 +50,7 @@ class PeerService:
         
     def _broadcast_conectando(self):
         """Envia mensagem Conectando via UDP para descobrir peers na rede."""
-        print("[INFO] Enviando broadcast 'Conectando'...")
+        print("Enviando broadcast 'Conectando'...")
         try:
             self.udp_connection.send("Conectando", "255.255.255.255", self.udp_port)
         except Exception as e:
@@ -95,6 +91,8 @@ class PeerService:
                 self._handle_hit(sender_ip)
             elif message == "destroyed":
                 self._handle_destroyed(sender_ip)
+            elif message == "miss":
+                self._handle_miss(sender_ip)
         except Exception as e:
             print(f"[ERRO] Erro ao processar mensagem TCP de {sender_ip}: {e}")
 
@@ -145,32 +143,34 @@ class PeerService:
             x = int(coords[0])
             y = int(coords[1])
             
-            print(f"\n[ATAQUE] Recebido tiro em ({x},{y}) de {sender_ip}")
+            print(f"\nRecebido tiro em ({x},{y}) de {sender_ip}")
             
             # Verifica se acertou
             resultado = self.game_controller.processar_tiro_recebido(x, y)
             
             if resultado["hit"]:
                 self.vezes_atingido += 1
-                print(f"[HIT] Sua embarcação foi atingida! Total de hits: {self.vezes_atingido}")
+                print(f"\nSua embarcação foi atingida! Total de hits: {self.vezes_atingido}")
                 self.tcp_connection.send("hit", sender_ip, self.tcp_port)
                 
                 if resultado["destroyed"]:
-                    print(f"[DESTROYED] Uma de suas embarcações foi destruída!")
+                    print(f"\nUma de suas embarcações foi destruída!")
                     self.tcp_connection.send("destroyed", sender_ip, self.tcp_port)
                     
                     if resultado["fleet_destroyed"]:
-                        print(f"\n[GAME OVER] Todas as suas embarcações foram destruídas!")
+                        print(f"\nTodas as suas embarcações foram destruídas!")
                         self._broadcast_lost()
             else:
-                print(f"[MISS] O tiro de {sender_ip} errou!")
+                print(f"\nO tiro de {sender_ip} errou!")
+                # Envia confirmação de erro
+                self.tcp_connection.send("miss", sender_ip, self.tcp_port)
                 
         except Exception as e:
-            print(f"[ERRO] Erro ao processar tiro: {e}")
+            print(f"Erro ao processar tiro: {e}")
 
     def _handle_hit(self, sender_ip):
         """Processa confirmação de acerto."""
-        print(f"[ACERTO] Você acertou uma embarcação de {sender_ip}!")
+        print(f"Você atingiu uma embarcação de {sender_ip}!")
         self.jogadores_atingidos.add(sender_ip)
         
         # Atualiza o tabuleiro visual com o acerto se possível
@@ -182,7 +182,9 @@ class PeerService:
 
     def _handle_destroyed(self, sender_ip):
         """Processa confirmação de embarcação destruída."""
-        print(f"[DESTRUÍDO] Você destruiu uma embarcação de {sender_ip}!")
+        print(f"\n{'='*50}")
+        print(f"🔥 DESTRUÍDO! Você destruiu uma embarcação de {sender_ip}!")
+        print(f"{'='*50}\n")
         self.jogadores_atingidos.add(sender_ip)
         
         # Atualiza o tabuleiro visual com o acerto
@@ -192,30 +194,34 @@ class PeerService:
             # Também registra no tabuleiro específico do jogador
             self.game_controller.registrar_tiro_para_jogador(sender_ip, ultimo_tiro[0], ultimo_tiro[1], acertou=True)
 
+    def _handle_miss(self, sender_ip):
+        """Processa confirmação de erro (miss)."""
+        print(f"\nSeu tiro em {sender_ip} caiu na água!")
+
     def _handle_lost(self, sender_ip):
         """Processa mensagem de derrota de um jogador."""
-        print(f"\n[INFO] Jogador {sender_ip} foi derrotado e saiu do jogo!")
+        print(f"\nJogador {sender_ip} foi derrotado e saiu do jogo!")
         if sender_ip in self.peers:
             self.peers.remove(sender_ip)
 
     def _handle_saindo(self, sender_ip):
         """Processa mensagem de saída de um jogador."""
-        print(f"\n[INFO] Jogador {sender_ip} saiu do jogo.")
+        print(f"\nJogador {sender_ip} saiu do jogo.")
         if sender_ip in self.peers:
             self.peers.remove(sender_ip)
 
     def _broadcast_lost(self):
         """Envia mensagem de derrota para todos."""
-        print("[INFO] Enviando mensagem 'lost' para todos os participantes...")
+        print("\nEnviando mensagem 'lost' para todos os participantes...")
         for peer_ip in list(self.peers):
             try:
                 self.udp_connection.send("lost", peer_ip, self.udp_port)
             except Exception as e:
-                print(f"[ERRO] Falha ao enviar 'lost' para {peer_ip}: {e}")
+                print(f"\nFalha ao enviar 'lost' para {peer_ip}: {e}")
 
     def sair(self):
         """Sai do jogo e envia mensagem para todos."""
-        print("\n[INFO] Saindo do jogo...")
+        print("\nSaindo do jogo...")
         self.running = False
         
         # Envia mensagem de saída para todos
@@ -223,7 +229,7 @@ class PeerService:
             try:
                 self.udp_connection.send("saindo", peer_ip, self.udp_port)
             except Exception as e:
-                print(f"[ERRO] Falha ao enviar 'saindo' para {peer_ip}: {e}")
+                print(f"\nFalha ao enviar 'saindo' para {peer_ip}: {e}")
         
         # Exibe score final
         self._exibir_score()
@@ -273,11 +279,6 @@ class PeerService:
 
     def _realizar_turno_ataque(self):
         """Realiza um turno de ataque, perguntando ao jogador ou escolhendo automaticamente."""
-        print("\n" + "="*50)
-        print("TURNO DE ATAQUE")
-        print("="*50)
-        print(f"Oponentes disponíveis: {len(self.peers)}")
-        
         # Lista os oponentes
         for i, peer_ip in enumerate(self.peers, 1):
             tiros_feitos = len(self.tiros_por_jogador.get(peer_ip, []))
@@ -425,6 +426,11 @@ class PeerService:
         
         linha, coluna = posicao
         
+        # Converte para formato legível
+        letra_posicao = {0: "a", 1: "b", 2: "c", 3: "d", 4: "e", 
+                        5: "f", 6: "g", 7: "h", 8: "i", 9: "j"}
+        posicao_str = f"{letra_posicao[linha]}{coluna}"
+        
         # Registra o tiro
         if peer_ip not in self.tiros_por_jogador:
             self.tiros_por_jogador[peer_ip] = []
@@ -441,4 +447,4 @@ class PeerService:
         try:
             self.udp_connection.send(mensagem, peer_ip, self.udp_port)
         except Exception as e:
-            print(f"Falha ao enviar tiro para {peer_ip}: {e}")
+            pass
