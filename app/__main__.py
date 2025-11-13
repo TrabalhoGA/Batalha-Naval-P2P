@@ -30,22 +30,19 @@ def main():
     print("  - 'participantes' ou 'p': Listar participantes")
     print("  - 'sair' ou 'q': Sair do jogo")
     print("  - 'score' ou 's': Ver score atual")
-    print("\n[INFO] O jogo atacará automaticamente a cada 10 segundos.")
-    print("[INFO] Quando for seu turno, digite uma posição (ex: a5) em até 10s.")
-    print("[INFO] A mesma posição será usada para atacar TODOS os oponentes.")
-    print("[INFO] Digite comandos abaixo quando NÃO estiver em turno de ataque.\n")
         
-    # Loop principal do jogo
+    # Loop principal do jogo - INPUT ÚNICO
     try:
         while peer_service.running:
-            # Aguarda se estiver em turno de ataque
-            if peer_service.aguardando_input:
-                time.sleep(0.5)
-                continue
-                
             # Usa um try para não travar se o usuário não digitar nada
             try:
-                comando = input("\nComando (ou Enter para continuar): ").strip().lower()
+                # Prompt único para tudo
+                if peer_service.em_turno_ataque:
+                    prompt = "> "
+                else:
+                    prompt = "\nComando: "
+                    
+                comando = input(prompt).strip().lower()
             except EOFError:
                 continue
             except KeyboardInterrupt:
@@ -54,6 +51,12 @@ def main():
             if not comando:
                 continue
             
+            # Verifica se é input de turno de ataque
+            if peer_service.processar_input(comando):
+                # Foi processado como input de ataque
+                continue
+            
+            # Processa como comando normal
             if comando in ['sair', 'q', 'quit', 'exit']:
                 peer_service.sair()
                 break

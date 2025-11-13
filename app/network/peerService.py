@@ -28,6 +28,7 @@ class PeerService:
         self.input_escolhido = None
         self.input_lock = threading.Lock()
         self.aguardando_input = False
+        self.em_turno_ataque = False  # Nova flag para indicar se está em turno
         
     def start(self):
         """Inicia o serviço P2P."""
@@ -120,16 +121,16 @@ class PeerService:
             # Adiciona novos participantes
             for ip in lista_ips:
                 if ip not in self.peers and ip != self.ip_address and ip != "127.0.0.1":
-                    print(f"[INFO] Adicionando participante da lista: {ip}")
+                    print(f"Adicionando participante da lista: {ip}")
                     self.peers.append(ip)
                     
             # Adiciona o remetente se não estiver na lista
             if sender_ip not in self.peers:
-                print(f"[INFO] Adicionando remetente: {sender_ip}")
+                print(f"Adicionando remetente: {sender_ip}")
                 self.peers.append(sender_ip)
                 
         except Exception as e:
-            print(f"[ERRO] Erro ao processar lista de participantes: {e}")
+            print(f"Erro ao processar lista de participantes: {e}")
 
     def _handle_shot(self, message, sender_ip):
         """Processa tiro recebido."""
@@ -282,13 +283,50 @@ class PeerService:
             tiros_feitos = len(self.tiros_por_jogador.get(peer_ip, []))
             print(f"  {i}. {peer_ip} (Tiros feitos: {tiros_feitos})")
         
-        # Escolhe UMA posição para atacar TODOS os jogadores
-        print(f"\n[INPUT] Escolha UMA posição para atacar TODOS os oponentes (ex: a5)")
-        print(f"[INPUT] Você tem 10 segundos para decidir...")
-        posicao_escolhida = self._escolher_alvo_com_timeout(timeout=10)
+        # Marca que está em turno de ataque
+        with self.input_lock:
+            self.em_turno_ataque = True
+            self.input_escolhido = None
+            self.aguardando_input = True
+        
+        print(f"\nDigite uma posição para atacar (ex: a5)")
+        
+        # Aguarda input por 10 segundos
+        inicio = time.time()
+        while time.time() - inicio < 10:
+            with self.input_lock:
+                if self.input_escolhido is not None:
+                    break
+            time.sleep(0.1)
+        
+        # Finaliza período de input
+        with self.input_lock:
+            self.aguardando_input = False
+            self.em_turno_ataque = False
+            escolha_usuario = self.input_escolhido
+            self.input_escolhido = None
+        
+        # Processa escolha
+        posicao_escolhida = None
+        
+        if escolha_usuario:
+            # Tenta decodificar como posição
+            try:
+                pos_decodificada = self._decodificar_posicao(escolha_usuario)
+                linha, coluna = pos_decodificada
+                print(f" Você escolheu atacar na posição: {escolha_usuario.upper()}")
+                posicao_escolhida = (linha, coluna)
+            except:
+                # Não é uma posição válida, ignora
+                print(f"Aviso! '{escolha_usuario}' não é uma posição válida. Escolhendo automaticamente...")
+                posicao_escolhida = self._escolher_posicao_automatica_geral()
+        else:
+            # Escolha automática
+            print("Tempo esgotado! Escolhendo posição automaticamente...")
+            posicao_escolhida = self._escolher_posicao_automatica_geral()
         
         if not posicao_escolhida:
-            print("[INFO] Nenhuma posição escolhida.")
+            print("Nenhuma posição escolhida.")
             return
         
         # Aplica o ataque para cada oponente
@@ -298,54 +336,16 @@ class PeerService:
                 
             print(f"\n→ Atacando {peer_ip} na posição escolhida...")
             self._enviar_tiro(peer_ip, posicao_escolhida)
-
-    def _escolher_alvo_com_timeout(self, timeout=10):
-        """
-        Permite ao usuário escolher um alvo em até 'timeout' segundos.
-        Se não escolher, seleciona automaticamente.
-        Retorna uma tupla (linha, coluna) ou None.
-        """
-        # Reseta estado
+    
+    def processar_input(self, comando):
+        """Processa input do usuário, seja comando ou posição de ataque."""
         with self.input_lock:
-            self.input_escolhido = None
-            self.aguardando_input = True
-        
-        # Thread para capturar input do usuário
-        def _capturar_input():
-            try:
-                escolha = input("Digite a posição (ou deixe vazio para auto): ").strip().lower()
-                with self.input_lock:
-                    if self.aguardando_input:
-                        self.input_escolhido = escolha if escolha else None
-            except:
-                pass
-        
-        input_thread = threading.Thread(target=_capturar_input, daemon=True)
-        input_thread.start()
-        
-        # Aguarda timeout
-        input_thread.join(timeout=timeout)
-        
-        # Finaliza período de input
-        with self.input_lock:
-            self.aguardando_input = False
-            escolha_usuario = self.input_escolhido
-        
-        # Se usuário escolheu e é válido
-        if escolha_usuario:
-            try:
-                pos_decodificada = self._decodificar_posicao(escolha_usuario)
-                linha, coluna = pos_decodificada
-                
-                print(f"[OK] Você escolheu atacar na posição: {escolha_usuario.upper()}")
-                return (linha, coluna)
-            except Exception as e:
-                print(f"[ERRO] Posição inválida: {e}. Escolhendo automaticamente...")
-                return self._escolher_posicao_automatica_geral()
-        
-        # Escolha automática se não digitou nada ou timeout
-        print("[AUTO] Tempo esgotado! Escolhendo posição automaticamente...")
-        return self._escolher_posicao_automatica_geral()
+            if self.aguardando_input and self.em_turno_ataque:
+                # Durante turno de ataque, guarda o input
+                self.input_escolhido = comando
+                return True  # Input foi processado no contexto de ataque
+            else:
+                return False  # Input não é para ataque, processar como comando normal
 
     def _decodificar_posicao(self, posicao):
         """Decodifica uma posição no formato 'a5' para (linha, coluna)."""
@@ -386,7 +386,7 @@ class PeerService:
         posicoes_disponiveis = [pos for pos in todas_posicoes if pos not in tiros_feitos]
         
         if not posicoes_disponiveis:
-            print(f"[INFO] Todas as posições de {peer_ip} já foram atacadas!")
+            print(f"Todas as posições de {peer_ip} já foram atacadas!")
             return None
         
         # Escolhe aleatoriamente
@@ -397,7 +397,7 @@ class PeerService:
                         5: "f", 6: "g", 7: "h", 8: "i", 9: "j"}
         posicao_str = f"{letra_posicao[posicao_escolhida[0]]}{posicao_escolhida[1]}"
         
-        print(f"[AUTO] Posição escolhida automaticamente: {posicao_str}")
+        print(f"Posição escolhida automaticamente: {posicao_str}")
         return posicao_escolhida
 
     def _escolher_posicao_automatica_geral(self):
@@ -415,7 +415,7 @@ class PeerService:
                         5: "f", 6: "g", 7: "h", 8: "i", 9: "j"}
         posicao_str = f"{letra_posicao[posicao_escolhida[0]]}{posicao_escolhida[1]}"
         
-        print(f"[AUTO] Posição escolhida automaticamente: {posicao_str.upper()}")
+        print(f"Posição escolhida automaticamente: {posicao_str.upper()}")
         return posicao_escolhida
 
     def _enviar_tiro(self, peer_ip, posicao):
@@ -440,6 +440,5 @@ class PeerService:
         mensagem = f"shot:{linha},{coluna}"
         try:
             self.udp_connection.send(mensagem, peer_ip, self.udp_port)
-            print(f"[TIRO] Disparado em ({linha},{coluna}) para {peer_ip}")
         except Exception as e:
-            print(f"[ERRO] Falha ao enviar tiro para {peer_ip}: {e}")
+            print(f"Falha ao enviar tiro para {peer_ip}: {e}")
