@@ -182,9 +182,7 @@ class PeerService:
 
     def _handle_destroyed(self, sender_ip):
         """Processa confirmação de embarcação destruída."""
-        print(f"\n{'='*50}")
-        print(f"🔥 DESTRUÍDO! Você destruiu uma embarcação de {sender_ip}!")
-        print(f"{'='*50}\n")
+        print(f"Você destruiu uma embarcação de {sender_ip}!")
         self.jogadores_atingidos.add(sender_ip)
         
         # Atualiza o tabuleiro visual com o acerto

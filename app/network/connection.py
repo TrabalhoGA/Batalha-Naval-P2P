@@ -10,3 +10,6 @@ class Connection:
 
     def listen(self):
         raise NotImplementedError
+
+    def sendto(self, message: bytes, target: tuple):
+        raise NotImplementedError
